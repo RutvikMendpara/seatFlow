@@ -445,6 +445,12 @@ function ticketPricePaise(
 }
 
 async function main() {
+  await prisma.outboxEvent.deleteMany();
+  await prisma.paymentEvent.deleteMany();
+  await prisma.ticket.deleteMany();
+  await prisma.bookingSeat.deleteMany();
+  await prisma.booking.deleteMany();
+  await prisma.paymentAttempt.deleteMany();
   await prisma.reservationSeat.deleteMany();
   await prisma.showSeat.deleteMany();
   await prisma.reservation.deleteMany();

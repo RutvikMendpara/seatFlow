@@ -46,6 +46,24 @@ enum ReservationStatus {
   CANCELLED
 }
 
+enum PaymentStatus {
+  // Recorded on our side. The provider order may not exist yet.
+  CREATED
+  // Provider order exists, waiting on the customer.
+  PENDING
+  SUCCEEDED
+  FAILED
+  // Money was taken but the booking couldn't be confirmed.
+  REFUND_PENDING
+  REFUNDED
+}
+
+enum OutboxStatus {
+  PENDING
+  DONE
+  FAILED
+}
+
 enum ShowSeatStatus {
   AVAILABLE
   HELD
@@ -62,6 +80,8 @@ model User {
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   sessions     Session[]
   reservations Reservation[]
+  payments     PaymentAttempt[]
+  bookings     Booking[]
 
   @@map("users")
 }
@@ -146,6 +166,7 @@ model Seat {
   auditorium   Auditorium   @relation(fields: [auditoriumId], references: [id], onDelete: Cascade)
   showSeats    ShowSeat[]
   reservations ReservationSeat[]
+  bookings     BookingSeat[]
 
   @@unique([auditoriumId, rowLabel, number])
   @@unique([auditoriumId, gridRow, gridColumn])
@@ -166,6 +187,7 @@ model Showtime {
   prices       ShowtimePrice[]
   seats        ShowSeat[]
   reservations Reservation[]
+  bookings     Booking[]
 
   @@index([movieId, startsAt])
   @@map("showtimes")
@@ -195,6 +217,7 @@ model ShowSeat {
   seat             Seat              @relation(fields: [seatId], references: [id])
   reservation      Reservation?      @relation(fields: [reservationId], references: [id])
   reservationSeats ReservationSeat[]
+  bookingSeats     BookingSeat[]
 
   @@id([showtimeId, seatId])
   @@index([reservationId])
@@ -215,6 +238,8 @@ model Reservation {
   showtime       Showtime          @relation(fields: [showtimeId], references: [id])
   seats          ReservationSeat[]
   showSeats      ShowSeat[]
+  payments       PaymentAttempt[]
+  booking        Booking?
 
   @@unique([userId, idempotencyKey])
   @@index([status, expiresAt])
@@ -235,4 +260,109 @@ model ReservationSeat {
 
   @@id([reservationId, seatId])
   @@map("reservation_seats")
+}
+
+model PaymentAttempt {
+  id                String        @id @default(uuid(7)) @db.Uuid
+  reservationId     String        @map("reservation_id") @db.Uuid
+  userId            String        @map("user_id") @db.Uuid
+  status            PaymentStatus @default(CREATED)
+  subtotalPaise     Int           @map("subtotal_paise")
+  feePaise          Int           @map("fee_paise")
+  taxPaise          Int           @map("tax_paise")
+  amountPaise       Int           @map("amount_paise")
+  currency          String        @default("INR")
+  providerOrderId   String?       @unique @map("provider_order_id")
+  providerPaymentId String?       @unique @map("provider_payment_id")
+  refundId          String?       @map("refund_id")
+  failureReason     String?       @map("failure_reason")
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  reservation       Reservation   @relation(fields: [reservationId], references: [id])
+  user              User          @relation(fields: [userId], references: [id])
+  booking           Booking?
+
+  @@index([reservationId])
+  @@index([status, createdAt])
+  @@map("payment_attempts")
+}
+
+// Every webhook we've accepted, keyed by the provider's event id. Used to
+// drop duplicate deliveries, and as a record of what the provider told us.
+model PaymentEvent {
+  id              String   @id @default(uuid(7)) @db.Uuid
+  providerEventId String   @unique @map("provider_event_id")
+  type            String
+  payload         Json
+  receivedAt      DateTime @default(now()) @map("received_at") @db.Timestamptz(3)
+
+  @@map("payment_events")
+}
+
+model Booking {
+  id               String         @id @default(uuid(7)) @db.Uuid
+  // Short code shown to the customer and printed on the ticket.
+  reference        String         @unique
+  userId           String         @map("user_id") @db.Uuid
+  showtimeId       String         @map("showtime_id") @db.Uuid
+  reservationId    String         @unique @map("reservation_id") @db.Uuid
+  paymentAttemptId String         @unique @map("payment_attempt_id") @db.Uuid
+  subtotalPaise    Int            @map("subtotal_paise")
+  feePaise         Int            @map("fee_paise")
+  taxPaise         Int            @map("tax_paise")
+  totalPaise       Int            @map("total_paise")
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  user             User           @relation(fields: [userId], references: [id])
+  showtime         Showtime       @relation(fields: [showtimeId], references: [id])
+  reservation      Reservation    @relation(fields: [reservationId], references: [id])
+  paymentAttempt   PaymentAttempt @relation(fields: [paymentAttemptId], references: [id])
+  seats            BookingSeat[]
+  ticket           Ticket?
+
+  @@index([userId, createdAt])
+  @@map("bookings")
+}
+
+model BookingSeat {
+  bookingId  String       @map("booking_id") @db.Uuid
+  showtimeId String       @map("showtime_id") @db.Uuid
+  seatId     String       @map("seat_id") @db.Uuid
+  category   SeatCategory
+  pricePaise Int          @map("price_paise")
+  booking    Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  showSeat   ShowSeat     @relation(fields: [showtimeId, seatId], references: [showtimeId, seatId])
+  seat       Seat         @relation(fields: [seatId], references: [id])
+
+  @@id([bookingId, seatId])
+  // The last line of defence against selling a seat twice.
+  @@unique([showtimeId, seatId])
+  @@map("booking_seats")
+}
+
+model Ticket {
+  id          String    @id @default(uuid(7)) @db.Uuid
+  bookingId   String    @unique @map("booking_id") @db.Uuid
+  issuedAt    DateTime  @default(now()) @map("issued_at") @db.Timestamptz(3)
+  checkedInAt DateTime? @map("checked_in_at") @db.Timestamptz(3)
+  booking     Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@map("tickets")
+}
+
+// Work that has to happen after a transaction commits (refunds, emails).
+// Written in the same transaction as the change that needs it, then picked
+// up by the worker, so nothing is lost if the process dies in between.
+model OutboxEvent {
+  id          String       @id @default(uuid(7)) @db.Uuid
+  type        String
+  payload     Json
+  status      OutboxStatus @default(PENDING)
+  attempts    Int          @default(0)
+  availableAt DateTime     @default(now()) @map("available_at") @db.Timestamptz(3)
+  lastError   String?      @map("last_error")
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  processedAt DateTime?    @map("processed_at") @db.Timestamptz(3)
+
+  @@index([status, availableAt])
+  @@map("outbox_events")
 }
