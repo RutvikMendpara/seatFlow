@@ -445,6 +445,9 @@ function ticketPricePaise(
 }
 
 async function main() {
+  await prisma.reservationSeat.deleteMany();
+  await prisma.showSeat.deleteMany();
+  await prisma.reservation.deleteMany();
   await prisma.showtimePrice.deleteMany();
   await prisma.showtime.deleteMany();
   await prisma.seat.deleteMany();

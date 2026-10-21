@@ -5,6 +5,7 @@ import { CatalogueModule } from './catalogue/catalogue.module';
 import { validateEnv } from './config/env';
 import { DatabaseModule } from './database/database.module';
 import { HealthController } from './health/health.controller';
+import { ReservationsModule } from './reservations/reservations.module';
 import { ShowtimesModule } from './showtimes/showtimes.module';
 
 @Module({
@@ -14,6 +15,7 @@ import { ShowtimesModule } from './showtimes/showtimes.module';
     AuthModule,
     CatalogueModule,
     ShowtimesModule,
+    ReservationsModule,
   ],
   controllers: [HealthController],
 })

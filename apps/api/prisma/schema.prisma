@@ -38,6 +38,14 @@ enum ShowtimeStatus {
   CANCELLED
 }
 
+enum ReservationStatus {
+  HELD
+  PAYMENT_PENDING
+  CONFIRMED
+  EXPIRED
+  CANCELLED
+}
+
 enum ShowSeatStatus {
   AVAILABLE
   HELD
@@ -53,6 +61,7 @@ model User {
   role         UserRole  @default(CUSTOMER)
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   sessions     Session[]
+  reservations Reservation[]
 
   @@map("users")
 }
@@ -136,6 +145,7 @@ model Seat {
   gridColumn   Int          @map("grid_column")
   auditorium   Auditorium   @relation(fields: [auditoriumId], references: [id], onDelete: Cascade)
   showSeats    ShowSeat[]
+  reservations ReservationSeat[]
 
   @@unique([auditoriumId, rowLabel, number])
   @@unique([auditoriumId, gridRow, gridColumn])
@@ -155,6 +165,7 @@ model Showtime {
   auditorium   Auditorium      @relation(fields: [auditoriumId], references: [id])
   prices       ShowtimePrice[]
   seats        ShowSeat[]
+  reservations Reservation[]
 
   @@index([movieId, startsAt])
   @@map("showtimes")
@@ -173,14 +184,55 @@ model ShowtimePrice {
 // One row per seat per show. This is the row that gets locked when someone
 // tries to hold a seat, so it has to exist before the show goes on sale.
 model ShowSeat {
-  showtimeId String         @map("showtime_id") @db.Uuid
-  seatId     String         @map("seat_id") @db.Uuid
-  status     ShowSeatStatus @default(AVAILABLE)
-  heldUntil  DateTime?      @map("held_until") @db.Timestamptz(3)
-  updatedAt  DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
-  showtime   Showtime       @relation(fields: [showtimeId], references: [id], onDelete: Cascade)
-  seat       Seat           @relation(fields: [seatId], references: [id])
+  showtimeId       String            @map("showtime_id") @db.Uuid
+  seatId           String            @map("seat_id") @db.Uuid
+  status           ShowSeatStatus    @default(AVAILABLE)
+  // The reservation that currently owns this seat, if any.
+  reservationId    String?           @map("reservation_id") @db.Uuid
+  heldUntil        DateTime?         @map("held_until") @db.Timestamptz(3)
+  updatedAt        DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  showtime         Showtime          @relation(fields: [showtimeId], references: [id], onDelete: Cascade)
+  seat             Seat              @relation(fields: [seatId], references: [id])
+  reservation      Reservation?      @relation(fields: [reservationId], references: [id])
+  reservationSeats ReservationSeat[]
 
   @@id([showtimeId, seatId])
+  @@index([reservationId])
   @@map("show_seats")
+}
+
+model Reservation {
+  id             String            @id @default(uuid(7)) @db.Uuid
+  userId         String            @map("user_id") @db.Uuid
+  showtimeId     String            @map("showtime_id") @db.Uuid
+  status         ReservationStatus @default(HELD)
+  expiresAt      DateTime          @map("expires_at") @db.Timestamptz(3)
+  subtotalPaise  Int               @map("subtotal_paise")
+  idempotencyKey String?           @map("idempotency_key")
+  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user           User              @relation(fields: [userId], references: [id])
+  showtime       Showtime          @relation(fields: [showtimeId], references: [id])
+  seats          ReservationSeat[]
+  showSeats      ShowSeat[]
+
+  @@unique([userId, idempotencyKey])
+  @@index([status, expiresAt])
+  @@map("reservations")
+}
+
+// The seats a reservation asked for, with the price at the time of the hold.
+// Kept even after the hold ends, unlike show_seats.reservation_id.
+model ReservationSeat {
+  reservationId String       @map("reservation_id") @db.Uuid
+  showtimeId    String       @map("showtime_id") @db.Uuid
+  seatId        String       @map("seat_id") @db.Uuid
+  category      SeatCategory
+  pricePaise    Int          @map("price_paise")
+  reservation   Reservation  @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  showSeat      ShowSeat     @relation(fields: [showtimeId, seatId], references: [showtimeId, seatId])
+  seat          Seat         @relation(fields: [seatId], references: [id])
+
+  @@id([reservationId, seatId])
+  @@map("reservation_seats")
 }
