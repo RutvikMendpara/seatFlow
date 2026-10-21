@@ -78,6 +78,23 @@ services:
         - action: rebuild
           path: apps/api/package.json
 
+  payments:
+    build:
+      context: .
+      dockerfile: apps/payment-sim/Dockerfile
+    environment:
+      PUBLIC_URL: http://localhost:${PAYMENTS_PORT:-4100}
+      WEBHOOK_URL: http://api:4000/api/payments/webhooks
+      SIM_API_KEY: ${PAYMENT_API_KEY:-sk_test_seatflow}
+      WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:-whsec_test_seatflow}
+    ports:
+      - "${PAYMENTS_PORT:-4100}:4100"
+    develop:
+      watch:
+        - action: sync
+          path: apps/payment-sim/src
+          target: /app/src
+
   web:
     build:
       context: .

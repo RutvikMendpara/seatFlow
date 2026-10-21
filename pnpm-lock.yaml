@@ -114,6 +114,15 @@ importers:
         specifier: ^8.12.3
         version: 8.12.3
 
+  apps/payment-sim:
+    devDependencies:
+      '@types/node':
+        specifier: ^24.19.2
+        version: 24.19.2
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+
   apps/web:
     dependencies:
       next:
