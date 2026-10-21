@@ -1,8 +1,8 @@
 # Reservation lifecycle
 
 This covers how a user goes from picking seats to holding them, and how holds
-end. Payment and confirmation come in a later milestone and will extend this
-doc.
+end. What happens once they go to pay is in
+[payment-consistency.md](payment-consistency.md).
 
 ## States
 
@@ -11,9 +11,12 @@ doc.
         ┌──────────────────────────────────► CANCELLED
         │
    ── HELD ──────────────────────────────────► EXPIRED
-        │        hold passes expires_at
-        │
-        └──► PAYMENT_PENDING ──► CONFIRMED        (not built yet)
+        │        hold passes expires_at          ▲
+        │                                        │ deadline passed, nothing paid
+        └──► PAYMENT_PENDING ────────────────────┤
+                    │                            │ late payment, seats still free
+                    └──────► CONFIRMED ◄─────────┘
+                     payment confirmed
 ```
 
 | State | Meaning |
@@ -21,7 +24,8 @@ doc.
 | `HELD` | Seats are held for this user until `expires_at` (10 minutes by default). |
 | `EXPIRED` | The hold ran out. Its seats are free again. |
 | `CANCELLED` | The user released the hold or picked different seats. |
-| `PAYMENT_PENDING`, `CONFIRMED` | Reserved for the payment flow. |
+| `PAYMENT_PENDING` | The user went to pay. Seats are held until the payment deadline (another 10 minutes, set once). |
+| `CONFIRMED` | Paid. Seats are `SOLD` and there's a booking. |
 
 A `HELD` reservation whose `expires_at` has passed is reported as `EXPIRED` by
 the API straight away. The database row is updated later by the worker.

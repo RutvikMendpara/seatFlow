@@ -10,7 +10,8 @@ Work in progress.
 
 - **Web:** Next.js 16, React 19, Tailwind CSS 4
 - **API:** NestJS 12, Prisma 7, plus a worker process for background jobs
-- **Data:** PostgreSQL 18 (source of truth), Redis 8
+- **Payments:** a mock provider (`apps/payment-sim`) with hosted checkout and signed webhooks
+- **Data:** PostgreSQL 18 (source of truth), Redis 8 (running, not used yet)
 
 ## Running locally
 
@@ -32,9 +33,18 @@ docker compose exec api pnpm db:seed
 | Web | http://localhost:3000 |
 | API | http://localhost:4000/api |
 | Postgres | localhost:5433 |
+| Payment simulator | http://localhost:4100 |
 | Redis | localhost:6379 |
 
-The `worker` service runs background jobs, currently expiring stale seat holds.
+The `worker` service runs background jobs: expiring stale holds, reconciling
+payments with the provider, and processing the outbox (refunds, emails).
+
+To book a ticket end to end from the command line:
+
+```bash
+set -a; . ./.env; set +a
+./scripts/demo-booking.sh
+```
 
 `--watch` syncs source changes into the containers, so both apps hot reload.
 Migrations run automatically when the API container starts.
@@ -59,8 +69,11 @@ measured concurrency results.
 
 - [Database design](docs/database-design.md)
 - [Reservation lifecycle](docs/reservation-lifecycle.md)
+- [Payment consistency](docs/payment-consistency.md)
 - [Testing](docs/testing.md)
 - Architecture decisions:
   [Postgres as source of truth](docs/adr/0001-postgres-as-source-of-truth.md),
   [row locks](docs/adr/0002-row-locks-over-optimistic-concurrency.md),
-  [modular monolith](docs/adr/0003-modular-monolith.md)
+  [modular monolith](docs/adr/0003-modular-monolith.md),
+  [expiry during payment](docs/adr/0004-expiry-during-payment.md),
+  [transactional outbox](docs/adr/0005-transactional-outbox.md)

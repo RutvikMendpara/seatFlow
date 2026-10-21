@@ -12,7 +12,9 @@ pnpm test:concurrency  # just the concurrency suite
 ```
 
 The e2e setup creates `seatflow_test` if it's missing, applies migrations and
-re-seeds the catalogue. Tests that change inventory create their own cinema and
+re-seeds the catalogue. The payment provider is replaced with an in-memory fake
+(`test/fake-gateway.ts`), and tests sign their own webhooks with the test
+secret. The worker's jobs are called directly, not on a timer. Tests that change inventory create their own cinema and
 show through `test/fixtures.ts`, so they don't affect each other.
 
 ## Suites
@@ -25,6 +27,11 @@ show through `test/fixtures.ts`, so they don't affect each other.
 | `reservations.e2e-spec.ts` | Holds, conflicts, all-or-nothing, replacing a hold, release, expiry takeover, idempotency, validation |
 | `hold-expiry.e2e-spec.ts` | The expiry worker, including not freeing seats someone else already took over |
 | `concurrency.e2e-spec.ts` | Many clients competing for the same seats |
+| `checkout.e2e-spec.ts` | Server-side pricing, payment window, double clicks, provider down |
+| `payment-webhooks.e2e-spec.ts` | Signatures, duplicates, declines, late payments, refunds, a forced crash mid-webhook |
+| `outbox.e2e-spec.ts` | Refunds and emails from the outbox, retries, backoff, giving up, redelivery |
+| `reconciliation.e2e-spec.ts` | Dropped webhooks, abandoned checkouts, provider outages, lost order ids |
+| `tickets.e2e-spec.ts` | Booking history, QR codes, check-in, forged tickets, simultaneous scans |
 
 ## Concurrency test
 
@@ -90,3 +97,18 @@ Things worth noting:
   caching session lookups are the obvious things to measure next.
 - Opening thousands of sockets at once overflows the server's accept backlog,
   and you get connection resets. That's why the test caps client connections.
+
+## End-to-end demo
+
+With the Docker stack running and seeded, this books two seats through the
+real simulator, waits for the webhook, fetches the ticket, and checks it in:
+
+```bash
+set -a; . ./.env; set +a
+./scripts/demo-booking.sh            # webhook delivered normally
+./scripts/demo-booking.sh duplicate  # delivered three times at once
+./scripts/demo-booking.sh drop       # never delivered; reconciliation confirms it
+```
+
+`drop` only confirms after the payment deadline plus the reconciliation grace
+period, so it takes about 11 minutes with the default settings.
