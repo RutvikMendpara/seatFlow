@@ -1,0 +1,13 @@
+{
+  "name": "seatflow",
+  "private": true,
+  "packageManager": "pnpm@11.17.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "docker compose up --build --watch",
+    "infra": "docker compose up -d postgres redis",
+    "down": "docker compose down"
+  }
+}
