@@ -53,6 +53,28 @@ services:
         - action: rebuild
           path: apps/api/package.json
 
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: dev
+    environment:
+      API_URL: http://api:4000
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      - api
+    develop:
+      watch:
+        - action: sync
+          path: apps/web/src
+          target: /repo/apps/web/src
+        - action: sync
+          path: apps/web/public
+          target: /repo/apps/web/public
+        - action: rebuild
+          path: apps/web/package.json
+
 volumes:
   pgdata:
   redisdata:
