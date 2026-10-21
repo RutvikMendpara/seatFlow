@@ -8,6 +8,11 @@ datasource db {
   provider = "postgresql"
 }
 
+enum UserRole {
+  CUSTOMER
+  ADMIN
+}
+
 enum Certificate {
   U
   UA7
@@ -31,6 +36,32 @@ enum ShowFormat {
 enum ShowtimeStatus {
   SCHEDULED
   CANCELLED
+}
+
+model User {
+  id           String    @id @default(uuid(7)) @db.Uuid
+  // Stored lowercased so lookups don't depend on how it was typed.
+  email        String    @unique
+  name         String
+  passwordHash String    @map("password_hash")
+  role         UserRole  @default(CUSTOMER)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  sessions     Session[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  // SHA-256 of the cookie token, so a DB leak doesn't leak live sessions.
+  tokenHash String   @unique @map("token_hash")
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
 }
 
 model City {

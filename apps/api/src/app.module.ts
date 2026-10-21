@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { AuthModule } from './auth/auth.module';
 import { CatalogueModule } from './catalogue/catalogue.module';
 import { validateEnv } from './config/env';
 import { DatabaseModule } from './database/database.module';
@@ -10,6 +11,7 @@ import { ShowtimesModule } from './showtimes/showtimes.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
     DatabaseModule,
+    AuthModule,
     CatalogueModule,
     ShowtimesModule,
   ],
