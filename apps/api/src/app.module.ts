@@ -5,6 +5,7 @@ import { CatalogueModule } from './catalogue/catalogue.module';
 import { validateEnv } from './config/env';
 import { DatabaseModule } from './database/database.module';
 import { HealthController } from './health/health.controller';
+import { OutboxModule } from './outbox/outbox.module';
 import { PaymentsModule } from './payments/payments.module';
 import { ReservationsModule } from './reservations/reservations.module';
 import { ShowtimesModule } from './showtimes/showtimes.module';
@@ -14,6 +15,7 @@ import { ShowtimesModule } from './showtimes/showtimes.module';
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
     DatabaseModule,
     AuthModule,
+    OutboxModule,
     CatalogueModule,
     ShowtimesModule,
     ReservationsModule,
