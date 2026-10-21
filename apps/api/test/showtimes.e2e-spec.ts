@@ -75,6 +75,29 @@ describe('Showtimes (e2e)', () => {
     }
   });
 
+  it('returns availability for every seat in the layout', async () => {
+    const list = await getShowtimes('city=mumbai').expect(200);
+    const id = list.body.cinemas[0].showtimes[0].id;
+
+    const [detail, availability] = await Promise.all([
+      request(app.getHttpServer()).get(`/api/showtimes/${id}`).expect(200),
+      request(app.getHttpServer()).get(`/api/showtimes/${id}/seats`).expect(200),
+    ]);
+
+    const layoutIds = detail.body.layout.seats.map((s: { id: string }) => s.id).sort();
+    const availableIds = availability.body.seats.map((s: { id: string }) => s.id).sort();
+    expect(availableIds).toEqual(layoutIds);
+    expect(
+      availability.body.seats.every((s: { status: string }) => s.status === 'AVAILABLE'),
+    ).toBe(true);
+  });
+
+  it('returns 404 for availability of an unknown show', async () => {
+    await request(app.getHttpServer())
+      .get('/api/showtimes/00000000-0000-7000-8000-000000000000/seats')
+      .expect(404);
+  });
+
   it('rejects a malformed showtime id', async () => {
     await request(app.getHttpServer()).get('/api/showtimes/123').expect(400);
   });

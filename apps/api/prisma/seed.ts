@@ -557,9 +557,17 @@ async function main() {
     }
   }
 
+  // Every show needs inventory rows before its seats can be held.
+  const inventory = await prisma.$executeRaw`
+    INSERT INTO show_seats (showtime_id, seat_id)
+    SELECT s.id, seat.id
+    FROM showtimes s
+    JOIN seats seat ON seat.auditorium_id = s.auditorium_id
+  `;
+
   console.log(
     `Seeded ${createdMovies.length} movies, ${cities.length} cities, ` +
-      `${auditoriumCount} auditoriums and ${showtimeCount} showtimes.`,
+      `${auditoriumCount} auditoriums, ${showtimeCount} showtimes and ${inventory} show seats.`,
   );
 }
 

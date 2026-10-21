@@ -15,6 +15,19 @@ PostgreSQL is the source of truth for everything the app sells. Schema lives in
 | `showtimes` | A movie playing in an auditorium at a time, in one language and format. |
 | `showtime_prices` | Price per seat category for a showtime, in paise. |
 
+## Inventory
+
+| Table | Notes |
+|---|---|
+| `show_seats` | One row per seat per showtime, with status `AVAILABLE`, `HELD` or `SOLD`. Primary key is `(showtime_id, seat_id)`. |
+
+Inventory rows are created up front, when the show is created, not when
+someone first picks a seat. A seat hold locks these rows with
+`SELECT ... FOR UPDATE`, and you can't lock a row that doesn't exist yet.
+
+A held seat whose `held_until` has passed is treated as available, even
+before the cleanup job resets it.
+
 Money is stored as integer paise to avoid floating point issues.
 All timestamps are `timestamptz`.
 
@@ -25,6 +38,8 @@ Some rules are enforced by the database, not just the API:
 - `showtimes_no_overlap`: an exclusion constraint (using `btree_gist`) that
   stops two scheduled shows from overlapping in the same auditorium. Cancelled
   shows are ignored, so a slot can be reused.
+- `show_seats_held_until_only_when_held`: a held seat always has an expiry,
+  and available or sold seats never do.
 - `showtimes_ends_after_start`, `showtime_prices_positive`,
   `movies_runtime_positive`, `movies_rating_range`: basic check constraints.
 - `seats (auditorium_id, row_label, number)` is unique, and so is

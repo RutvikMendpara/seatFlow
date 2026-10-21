@@ -14,6 +14,11 @@ export class ShowtimesController {
     return this.showtimes.listForMovie(slug, query);
   }
 
+  @Get('showtimes/:id/seats')
+  availability(@Param('id', ParseUUIDPipe) id: string) {
+    return this.showtimes.availability(id);
+  }
+
   @Get('showtimes/:id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.showtimes.findById(id);

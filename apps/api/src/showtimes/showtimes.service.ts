@@ -123,6 +123,25 @@ export class ShowtimesService {
     };
   }
 
+  // Seats whose hold has expired count as available even before the
+  // cleanup job gets to them.
+  async availability(id: string) {
+    const exists = await this.prisma.showtime.count({ where: { id } });
+    if (!exists) throw new NotFoundException('Showtime not found');
+
+    const seats = await this.prisma.$queryRaw<{ id: string; status: string }[]>`
+      SELECT
+        seat_id AS id,
+        CASE
+          WHEN status = 'HELD' AND held_until <= now() THEN 'AVAILABLE'
+          ELSE status::text
+        END AS status
+      FROM show_seats
+      WHERE showtime_id = ${id}::uuid
+    `;
+    return { showtimeId: id, seats };
+  }
+
   async findById(id: string) {
     const show = await this.prisma.showtime.findUnique({
       where: { id },

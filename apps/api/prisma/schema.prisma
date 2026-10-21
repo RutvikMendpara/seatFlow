@@ -38,6 +38,12 @@ enum ShowtimeStatus {
   CANCELLED
 }
 
+enum ShowSeatStatus {
+  AVAILABLE
+  HELD
+  SOLD
+}
+
 model User {
   id           String    @id @default(uuid(7)) @db.Uuid
   // Stored lowercased so lookups don't depend on how it was typed.
@@ -129,6 +135,7 @@ model Seat {
   gridRow      Int          @map("grid_row")
   gridColumn   Int          @map("grid_column")
   auditorium   Auditorium   @relation(fields: [auditoriumId], references: [id], onDelete: Cascade)
+  showSeats    ShowSeat[]
 
   @@unique([auditoriumId, rowLabel, number])
   @@unique([auditoriumId, gridRow, gridColumn])
@@ -147,6 +154,7 @@ model Showtime {
   movie        Movie           @relation(fields: [movieId], references: [id])
   auditorium   Auditorium      @relation(fields: [auditoriumId], references: [id])
   prices       ShowtimePrice[]
+  seats        ShowSeat[]
 
   @@index([movieId, startsAt])
   @@map("showtimes")
@@ -160,4 +168,19 @@ model ShowtimePrice {
 
   @@id([showtimeId, category])
   @@map("showtime_prices")
+}
+
+// One row per seat per show. This is the row that gets locked when someone
+// tries to hold a seat, so it has to exist before the show goes on sale.
+model ShowSeat {
+  showtimeId String         @map("showtime_id") @db.Uuid
+  seatId     String         @map("seat_id") @db.Uuid
+  status     ShowSeatStatus @default(AVAILABLE)
+  heldUntil  DateTime?      @map("held_until") @db.Timestamptz(3)
+  updatedAt  DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  showtime   Showtime       @relation(fields: [showtimeId], references: [id], onDelete: Cascade)
+  seat       Seat           @relation(fields: [seatId], references: [id])
+
+  @@id([showtimeId, seatId])
+  @@map("show_seats")
 }
