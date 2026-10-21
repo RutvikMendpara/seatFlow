@@ -13,7 +13,9 @@ describe('Reservations (e2e)', () => {
   beforeAll(async () => {
     app = await createTestApp();
     prisma = app.get(PrismaService);
-    [alice, bob] = await createUsers(prisma, 2);
+    const users = await createUsers(prisma, 2);
+    alice = users[0]!;
+    bob = users[1]!;
   });
 
   afterAll(async () => {
@@ -31,7 +33,7 @@ describe('Reservations (e2e)', () => {
   const getReservation = (user: TestUser, id: string) =>
     request(app.getHttpServer())
       .get(`/api/reservations/${id}`)
-      .set('Authorization', `Bearer ${user!.token}`);
+      .set('Authorization', `Bearer ${user.token}`);
 
   const release = (user: TestUser, id: string) =>
     request(app.getHttpServer())

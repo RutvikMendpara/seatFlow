@@ -8,6 +8,7 @@ const envSchema = z.object({
   DATABASE_URL: z.url(),
   DB_POOL_SIZE: z.coerce.number().int().positive().default(10),
   HOLD_TTL_SECONDS: z.coerce.number().int().positive().default(600),
+  HOLD_SWEEP_INTERVAL_MS: z.coerce.number().int().positive().default(15_000),
 });
 
 export type Env = z.infer<typeof envSchema>;
