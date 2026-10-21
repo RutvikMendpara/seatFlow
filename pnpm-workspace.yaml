@@ -1,2 +1,7 @@
 packages:
   - apps/*
+
+# Both ship prebuilt binaries, so their install scripts aren't needed.
+allowBuilds:
+  '@parcel/watcher': false
+  unrs-resolver: false

@@ -29,6 +29,27 @@ services:
       timeout: 3s
       retries: 10
 
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: dev
+    environment:
+      PORT: 4000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-seatflow}:${POSTGRES_PASSWORD:-seatflow}@postgres:5432/${POSTGRES_DB:-seatflow}
+    ports:
+      - "${API_PORT:-4000}:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    develop:
+      watch:
+        - action: sync
+          path: apps/api/src
+          target: /repo/apps/api/src
+        - action: rebuild
+          path: apps/api/package.json
+
 volumes:
   pgdata:
   redisdata:
