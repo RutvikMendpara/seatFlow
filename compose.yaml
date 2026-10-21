@@ -37,6 +37,10 @@ services:
     environment:
       PORT: 4000
       DATABASE_URL: postgresql://${POSTGRES_USER:-seatflow}:${POSTGRES_PASSWORD:-seatflow}@postgres:5432/${POSTGRES_DB:-seatflow}
+      PAYMENT_PROVIDER_URL: http://payments:4100
+      PAYMENT_API_KEY: ${PAYMENT_API_KEY:-sk_test_seatflow}
+      PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:-whsec_test_seatflow}
+      WEB_URL: http://localhost:${WEB_PORT:-3000}
     ports:
       - "${API_PORT:-4000}:4000"
     depends_on:
@@ -61,6 +65,9 @@ services:
     command: ["pnpm", "start:worker:docker"]
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-seatflow}:${POSTGRES_PASSWORD:-seatflow}@postgres:5432/${POSTGRES_DB:-seatflow}
+      PAYMENT_PROVIDER_URL: http://payments:4100
+      PAYMENT_API_KEY: ${PAYMENT_API_KEY:-sk_test_seatflow}
+      PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:-whsec_test_seatflow}
     depends_on:
       postgres:
         condition: service_healthy

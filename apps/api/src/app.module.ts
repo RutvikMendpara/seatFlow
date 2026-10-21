@@ -5,6 +5,7 @@ import { CatalogueModule } from './catalogue/catalogue.module';
 import { validateEnv } from './config/env';
 import { DatabaseModule } from './database/database.module';
 import { HealthController } from './health/health.controller';
+import { PaymentsModule } from './payments/payments.module';
 import { ReservationsModule } from './reservations/reservations.module';
 import { ShowtimesModule } from './showtimes/showtimes.module';
 
@@ -16,6 +17,7 @@ import { ShowtimesModule } from './showtimes/showtimes.module';
     CatalogueModule,
     ShowtimesModule,
     ReservationsModule,
+    PaymentsModule,
   ],
   controllers: [HealthController],
 })

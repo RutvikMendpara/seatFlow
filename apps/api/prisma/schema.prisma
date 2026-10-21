@@ -274,6 +274,7 @@ model PaymentAttempt {
   currency          String        @default("INR")
   providerOrderId   String?       @unique @map("provider_order_id")
   providerPaymentId String?       @unique @map("provider_payment_id")
+  checkoutUrl       String?       @map("checkout_url")
   refundId          String?       @map("refund_id")
   failureReason     String?       @map("failure_reason")
   createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
