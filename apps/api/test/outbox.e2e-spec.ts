@@ -42,6 +42,18 @@ describe('Outbox (e2e)', () => {
     });
   });
 
+  // Timestamps here are compared against the database clock, so set them with it too.
+  const dbNow = async () =>
+    (await prisma.$queryRaw<{ now: Date }[]>`SELECT now() AS now`)[0]!.now;
+
+  async function makeDue(where: object) {
+    const ids = (await prisma.outboxEvent.findMany({ where, select: { id: true } })).map((e) => e.id);
+    await prisma.$executeRaw`
+      UPDATE outbox_events SET available_at = now() - interval '1 second'
+      WHERE id = ANY(${ids}::uuid[])
+    `;
+  }
+
   async function drain() {
     while ((await outbox.processBatch()) > 0);
   }
@@ -83,6 +95,41 @@ describe('Outbox (e2e)', () => {
     });
   });
 
+  it('makes new events due by the database clock, even if the app clock is ahead', async () => {
+    // Only Date is faked, so I/O and timers keep working.
+    jest.useFakeTimers({
+      now: Date.now() + 60_000,
+      doNotFake: [
+        'hrtime',
+        'nextTick',
+        'performance',
+        'queueMicrotask',
+        'setImmediate',
+        'clearImmediate',
+        'setInterval',
+        'clearInterval',
+        'setTimeout',
+        'clearTimeout',
+      ],
+    });
+    let paymentId: string;
+    try {
+      paymentId = await paymentNeedingRefund();
+    } finally {
+      jest.useRealTimers();
+    }
+
+    const [row] = await prisma.$queryRaw<{ due: boolean }[]>`
+      SELECT available_at <= now() AS due FROM outbox_events
+      WHERE payload->>'paymentAttemptId' = ${paymentId}
+    `;
+    expect(row?.due).toBe(true);
+    await drain();
+    expect((await prisma.paymentAttempt.findUniqueOrThrow({ where: { id: paymentId } })).status).toBe(
+      'REFUNDED',
+    );
+  });
+
   it('retries with backoff while the provider is down', async () => {
     const paymentId = await paymentNeedingRefund();
     workerGateway.down = true;
@@ -93,15 +140,12 @@ describe('Outbox (e2e)', () => {
     });
     expect(event?.attempts).toBe(1);
     expect(event?.lastError).toContain('provider is down');
-    expect(event!.availableAt.getTime()).toBeGreaterThan(Date.now());
+    expect(event!.availableAt.getTime()).toBeGreaterThan((await dbNow()).getTime());
     // Not picked up again before the backoff runs out.
     expect(await outbox.processBatch()).toBe(0);
 
     workerGateway.down = false;
-    await prisma.outboxEvent.update({
-      where: { id: event!.id },
-      data: { availableAt: new Date() },
-    });
+    await makeDue({ id: event!.id });
     await drain();
     const payment = await prisma.paymentAttempt.findUniqueOrThrow({ where: { id: paymentId } });
     expect(payment.status).toBe('REFUNDED');
@@ -113,10 +157,12 @@ describe('Outbox (e2e)', () => {
     const refundsBefore = workerGateway.refunds.length;
 
     // As if the worker crashed after refunding but before marking the event done.
-    await prisma.outboxEvent.updateMany({
-      where: { type: 'payment.refund_requested', payload: { path: ['paymentAttemptId'], equals: paymentId } },
-      data: { status: 'PENDING', availableAt: new Date() },
-    });
+    const thisRefund = {
+      type: 'payment.refund_requested',
+      payload: { path: ['paymentAttemptId'], equals: paymentId },
+    };
+    await prisma.outboxEvent.updateMany({ where: thisRefund, data: { status: 'PENDING' } });
+    await makeDue(thisRefund);
     await drain();
     expect(workerGateway.refunds.length).toBe(refundsBefore);
   });
@@ -124,10 +170,9 @@ describe('Outbox (e2e)', () => {
   it('picks up an event whose worker died mid-way', async () => {
     const paymentId = await paymentNeedingRefund();
     // Claimed once, then the lease ran out without the event being finished.
-    await prisma.outboxEvent.updateMany({
-      where: { payload: { path: ['paymentAttemptId'], equals: paymentId } },
-      data: { attempts: 1, availableAt: new Date(Date.now() - 1000) },
-    });
+    const thisRefund = { payload: { path: ['paymentAttemptId'], equals: paymentId } };
+    await prisma.outboxEvent.updateMany({ where: thisRefund, data: { attempts: 1 } });
+    await makeDue(thisRefund);
     await drain();
     const payment = await prisma.paymentAttempt.findUniqueOrThrow({ where: { id: paymentId } });
     expect(payment.status).toBe('REFUNDED');

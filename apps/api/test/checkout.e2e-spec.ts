@@ -108,10 +108,9 @@ describe('Checkout (e2e)', () => {
 
   it('refuses expired, released and other people’s reservations', async () => {
     const expired = await holdTwoSeats(alice);
-    await prisma.reservation.update({
-      where: { id: expired.id },
-      data: { expiresAt: new Date(Date.now() - 1000) },
-    });
+    await prisma.$executeRaw`
+      UPDATE reservations SET expires_at = now() - interval '1 second' WHERE id = ${expired.id}::uuid
+    `;
     await checkout(alice, expired.id).expect(409);
 
     const released = await holdTwoSeats(alice);
