@@ -13,8 +13,7 @@ export class FakeMailer implements Mailer {
 }
 
 // The worker's services without starting its timers. Tests call the jobs directly.
-export async function createTestWorker() {
-  const gateway = new FakeGateway();
+export async function createTestWorker(gateway = new FakeGateway()) {
   const mailer = new FakeMailer();
   const moduleRef: TestingModule = await Test.createTestingModule({ imports: [WorkerModule] })
     .overrideProvider(PAYMENT_GATEWAY)

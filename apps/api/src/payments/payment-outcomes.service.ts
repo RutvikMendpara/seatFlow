@@ -170,7 +170,8 @@ export class PaymentOutcomesService {
       where: { id: attempt.id },
       data: {
         status: PaymentStatus.FAILED,
-        providerOrderId: event.orderId,
+        // Empty when the order never reached the provider.
+        providerOrderId: event.orderId || undefined,
         failureReason: event.reason ?? 'failed',
       },
     });

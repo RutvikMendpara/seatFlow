@@ -43,12 +43,14 @@ export class FakeGateway implements PaymentGateway {
     this.check();
     const order = this.orders.get(orderId);
     if (!order) throw new PaymentProviderError('not found');
-    return order;
+    return this.withExpiry(order);
   }
 
   async findOrdersByReference(reference: string) {
     this.check();
-    return [...this.orders.values()].filter((o) => o.reference === reference);
+    return [...this.orders.values()]
+      .filter((o) => o.reference === reference)
+      .map((o) => this.withExpiry(o));
   }
 
   async cancelOrder(orderId: string) {
@@ -80,6 +82,14 @@ export class FakeGateway implements PaymentGateway {
     const order = this.orders.get(orderId)!;
     order.status = 'failed';
     order.failureReason = 'card_declined';
+    return order;
+  }
+
+  // Like the real provider, an unpaid order can't be paid after it expires.
+  private withExpiry<T extends ProviderOrder & { expiresAt: Date }>(order: T) {
+    if (order.status === 'created' && order.expiresAt.getTime() <= Date.now()) {
+      order.status = 'expired';
+    }
     return order;
   }
 

@@ -4,6 +4,7 @@ import { validateEnv } from '../config/env';
 import { DatabaseModule } from '../database/database.module';
 import { OutboxModule } from '../outbox/outbox.module';
 import { OutboxWorkerModule } from '../outbox/outbox-worker.module';
+import { PaymentsCoreModule } from '../payments/payments-core.module';
 import { HoldExpiryService } from '../reservations/hold-expiry.service';
 import { WorkerJobs } from './jobs';
 
@@ -13,6 +14,7 @@ import { WorkerJobs } from './jobs';
     DatabaseModule,
     OutboxModule,
     OutboxWorkerModule,
+    PaymentsCoreModule,
   ],
   providers: [HoldExpiryService, WorkerJobs],
 })

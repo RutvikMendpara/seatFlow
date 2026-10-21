@@ -10,6 +10,9 @@ const envSchema = z.object({
   HOLD_TTL_SECONDS: z.coerce.number().int().positive().default(600),
   HOLD_SWEEP_INTERVAL_MS: z.coerce.number().int().positive().default(15_000),
   OUTBOX_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(2_000),
+  RECONCILE_INTERVAL_MS: z.coerce.number().int().positive().default(30_000),
+  // How long after a payment deadline to wait for a webhook before asking the provider.
+  RECONCILE_GRACE_SECONDS: z.coerce.number().int().nonnegative().default(60),
   // Extra time the seats stay held once the user goes to pay.
   PAYMENT_WINDOW_SECONDS: z.coerce.number().int().positive().default(600),
   PAYMENT_PROVIDER_URL: z.url(),

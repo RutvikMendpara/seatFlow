@@ -2,6 +2,7 @@ import { Injectable, Logger, OnApplicationBootstrap, OnApplicationShutdown } fro
 import { ConfigService } from '@nestjs/config';
 import type { Env } from '../config/env';
 import { OutboxProcessor } from '../outbox/outbox.processor';
+import { ReconciliationService } from '../payments/reconciliation.service';
 import { HoldExpiryService } from '../reservations/hold-expiry.service';
 
 @Injectable()
@@ -12,6 +13,7 @@ export class WorkerJobs implements OnApplicationBootstrap, OnApplicationShutdown
   constructor(
     private readonly holds: HoldExpiryService,
     private readonly outbox: OutboxProcessor,
+    private readonly reconciliation: ReconciliationService,
     private readonly config: ConfigService<Env, true>,
   ) {}
 
@@ -21,6 +23,9 @@ export class WorkerJobs implements OnApplicationBootstrap, OnApplicationShutdown
     );
     this.every('outbox', this.config.get('OUTBOX_POLL_INTERVAL_MS', { infer: true }), () =>
       this.outbox.processBatch(),
+    );
+    this.every('reconcile', this.config.get('RECONCILE_INTERVAL_MS', { infer: true }), () =>
+      this.reconciliation.run(),
     );
   }
 
