@@ -47,6 +47,9 @@ services:
         - action: sync
           path: apps/api/src
           target: /repo/apps/api/src
+        - action: sync+restart
+          path: apps/api/prisma
+          target: /repo/apps/api/prisma
         - action: rebuild
           path: apps/api/package.json
 

@@ -5,11 +5,13 @@ WORKDIR /repo
 
 FROM base AS deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY apps/api/package.json apps/api/
+COPY apps/api/package.json apps/api/prisma.config.ts apps/api/
+# postinstall runs prisma generate, which needs the schema.
+COPY apps/api/prisma apps/api/prisma
 RUN pnpm install --frozen-lockfile --filter api
 
 FROM deps AS dev
 COPY apps/api apps/api
 WORKDIR /repo/apps/api
 EXPOSE 4000
-CMD ["pnpm", "start:dev"]
+CMD ["pnpm", "start:docker"]

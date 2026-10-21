@@ -1,0 +1,132 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Certificate {
+  U
+  UA7
+  UA13
+  UA16
+  A
+}
+
+enum SeatCategory {
+  CLASSIC
+  PREMIUM
+  RECLINER
+}
+
+enum ShowFormat {
+  STANDARD
+  THREE_D
+  IMAX
+}
+
+enum ShowtimeStatus {
+  SCHEDULED
+  CANCELLED
+}
+
+model City {
+  id      String   @id @default(uuid(7)) @db.Uuid
+  slug    String   @unique
+  name    String
+  state   String
+  cinemas Cinema[]
+
+  @@map("cities")
+}
+
+model Movie {
+  id             String      @id @default(uuid(7)) @db.Uuid
+  slug           String      @unique
+  title          String
+  synopsis       String
+  runtimeMinutes Int         @map("runtime_minutes")
+  languages      String[]
+  genres         String[]
+  certificate    Certificate
+  releaseDate    DateTime    @map("release_date") @db.Date
+  rating         Decimal?    @db.Decimal(3, 1)
+  posterUrl      String?     @map("poster_url")
+  trailerUrl     String?     @map("trailer_url")
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  showtimes      Showtime[]
+
+  @@index([releaseDate])
+  @@map("movies")
+}
+
+model Cinema {
+  id          String       @id @default(uuid(7)) @db.Uuid
+  cityId      String       @map("city_id") @db.Uuid
+  slug        String       @unique
+  name        String
+  address     String
+  city        City         @relation(fields: [cityId], references: [id])
+  auditoriums Auditorium[]
+
+  @@index([cityId])
+  @@map("cinemas")
+}
+
+model Auditorium {
+  id        String     @id @default(uuid(7)) @db.Uuid
+  cinemaId  String     @map("cinema_id") @db.Uuid
+  name      String
+  cinema    Cinema     @relation(fields: [cinemaId], references: [id])
+  seats     Seat[]
+  showtimes Showtime[]
+
+  @@unique([cinemaId, name])
+  @@map("auditoriums")
+}
+
+model Seat {
+  id           String       @id @default(uuid(7)) @db.Uuid
+  auditoriumId String       @map("auditorium_id") @db.Uuid
+  rowLabel     String       @map("row_label")
+  number       Int
+  category     SeatCategory
+  // Position on the layout grid. Gaps between positions are aisles.
+  gridRow      Int          @map("grid_row")
+  gridColumn   Int          @map("grid_column")
+  auditorium   Auditorium   @relation(fields: [auditoriumId], references: [id], onDelete: Cascade)
+
+  @@unique([auditoriumId, rowLabel, number])
+  @@unique([auditoriumId, gridRow, gridColumn])
+  @@map("seats")
+}
+
+model Showtime {
+  id           String          @id @default(uuid(7)) @db.Uuid
+  movieId      String          @map("movie_id") @db.Uuid
+  auditoriumId String          @map("auditorium_id") @db.Uuid
+  startsAt     DateTime        @map("starts_at") @db.Timestamptz(3)
+  endsAt       DateTime        @map("ends_at") @db.Timestamptz(3)
+  language     String
+  format       ShowFormat      @default(STANDARD)
+  status       ShowtimeStatus  @default(SCHEDULED)
+  movie        Movie           @relation(fields: [movieId], references: [id])
+  auditorium   Auditorium      @relation(fields: [auditoriumId], references: [id])
+  prices       ShowtimePrice[]
+
+  @@index([movieId, startsAt])
+  @@map("showtimes")
+}
+
+model ShowtimePrice {
+  showtimeId String       @map("showtime_id") @db.Uuid
+  category   SeatCategory
+  pricePaise Int          @map("price_paise")
+  showtime   Showtime     @relation(fields: [showtimeId], references: [id], onDelete: Cascade)
+
+  @@id([showtimeId, category])
+  @@map("showtime_prices")
+}
