@@ -1,10 +1,12 @@
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { hashPassword } from '../src/auth/password';
 import {
   Certificate,
   PrismaClient,
   SeatCategory,
   ShowFormat,
+  UserRole,
 } from '../src/generated/prisma/client';
 
 const prisma = new PrismaClient({
@@ -573,6 +575,20 @@ async function main() {
     FROM showtimes s
     JOIN seats seat ON seat.auditorium_id = s.auditorium_id
   `;
+
+  // A staff account for checking tickets in. Credentials come from the env
+  // so they aren't hardcoded here.
+  const adminEmail = process.env.SEED_ADMIN_EMAIL?.toLowerCase();
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+  if (adminEmail && adminPassword) {
+    const passwordHash = await hashPassword(adminPassword);
+    await prisma.user.upsert({
+      where: { email: adminEmail },
+      create: { email: adminEmail, name: 'Box Office', passwordHash, role: UserRole.ADMIN },
+      update: { passwordHash, role: UserRole.ADMIN },
+    });
+    console.log(`Admin user: ${adminEmail}`);
+  }
 
   console.log(
     `Seeded ${createdMovies.length} movies, ${cities.length} cities, ` +

@@ -41,6 +41,9 @@ services:
       PAYMENT_API_KEY: ${PAYMENT_API_KEY:-sk_test_seatflow}
       PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:-whsec_test_seatflow}
       WEB_URL: http://localhost:${WEB_PORT:-3000}
+      TICKET_SIGNING_SECRET: ${TICKET_SIGNING_SECRET:-dev-only-ticket-signing-secret-change-me}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
     ports:
       - "${API_PORT:-4000}:4000"
     depends_on:
@@ -68,6 +71,7 @@ services:
       PAYMENT_PROVIDER_URL: http://payments:4100
       PAYMENT_API_KEY: ${PAYMENT_API_KEY:-sk_test_seatflow}
       PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:-whsec_test_seatflow}
+      TICKET_SIGNING_SECRET: ${TICKET_SIGNING_SECRET:-dev-only-ticket-signing-secret-change-me}
     depends_on:
       postgres:
         condition: service_healthy

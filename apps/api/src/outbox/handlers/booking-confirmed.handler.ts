@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { seatLabels } from '../../bookings/booking.mapper';
 import { formatInTimeZone } from '../../common/format';
 import { PrismaService } from '../../database/prisma.service';
 import { MAILER, type Mailer } from '../../notifications/mailer';
@@ -30,9 +31,7 @@ export class BookingConfirmedHandler implements OutboxHandler {
     });
 
     const { showtime } = booking;
-    const seats = booking.seats
-      .map((s) => `${s.seat.rowLabel}${s.seat.number}`)
-      .sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
+    const seats = seatLabels(booking);
 
     await this.mailer.send({
       to: booking.user.email,

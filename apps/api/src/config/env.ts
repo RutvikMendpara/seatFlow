@@ -18,6 +18,8 @@ const envSchema = z.object({
   PAYMENT_PROVIDER_URL: z.url(),
   PAYMENT_API_KEY: z.string().min(8),
   PAYMENT_WEBHOOK_SECRET: z.string().min(16),
+  // Signs the token in each ticket's QR code.
+  TICKET_SIGNING_SECRET: z.string().min(32),
   // Where the provider sends the customer back to after paying.
   WEB_URL: z.url().default('http://localhost:3000'),
 });
