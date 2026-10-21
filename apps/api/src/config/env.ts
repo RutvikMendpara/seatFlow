@@ -9,6 +9,7 @@ const envSchema = z.object({
   DB_POOL_SIZE: z.coerce.number().int().positive().default(10),
   HOLD_TTL_SECONDS: z.coerce.number().int().positive().default(600),
   HOLD_SWEEP_INTERVAL_MS: z.coerce.number().int().positive().default(15_000),
+  OUTBOX_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(2_000),
   // Extra time the seats stay held once the user goes to pay.
   PAYMENT_WINDOW_SECONDS: z.coerce.number().int().positive().default(600),
   PAYMENT_PROVIDER_URL: z.url(),
