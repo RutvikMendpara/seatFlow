@@ -129,13 +129,16 @@ export class ShowtimesService {
     const exists = await this.prisma.showtime.count({ where: { id } });
     if (!exists) throw new NotFoundException('Showtime not found');
 
-    const seats = await this.prisma.$queryRaw<{ id: string; status: string }[]>`
+    // version lets clients merge this snapshot with live updates that may
+    // have arrived before or after it.
+    const seats = await this.prisma.$queryRaw<{ id: string; status: string; version: number }[]>`
       SELECT
         seat_id AS id,
         CASE
           WHEN status = 'HELD' AND held_until <= now() THEN 'AVAILABLE'
           ELSE status::text
-        END AS status
+        END AS status,
+        version
       FROM show_seats
       WHERE showtime_id = ${id}::uuid
     `;
