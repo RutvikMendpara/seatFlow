@@ -83,3 +83,9 @@ export type ShowtimeDetail = {
   prices: Price[];
   layout: { rows: number; columns: number; seats: Seat[] };
 };
+
+export type SeatStatus = 'AVAILABLE' | 'HELD' | 'SOLD';
+
+export type SeatState = { id: string; status: SeatStatus; version: number };
+
+export type Availability = { showtimeId: string; seats: SeatState[] };

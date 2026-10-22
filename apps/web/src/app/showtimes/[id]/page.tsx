@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { SeatLayout } from '@/components/seat-layout';
+import { SeatPicker } from '@/components/seat-picker';
 import { apiGet } from '@/lib/api';
 import {
   certificateLabel,
@@ -8,9 +8,11 @@ import {
   formatTime,
   showFormatLabel,
 } from '@/lib/format';
-import type { ShowtimeDetail } from '@/lib/types';
+import { param, type SearchParams } from '@/lib/search-params';
+import { getCurrentUser } from '@/lib/session';
+import type { Availability, ShowtimeDetail } from '@/lib/types';
 
-type Props = { params: Promise<{ id: string }> };
+type Props = { params: Promise<{ id: string }>; searchParams: SearchParams };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
@@ -18,9 +20,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return { title: `${show.movie.title} at ${show.cinema.name}` };
 }
 
-export default async function ShowtimePage({ params }: Props) {
+export default async function ShowtimePage({ params, searchParams }: Props) {
   const { id } = await params;
-  const show = await apiGet<ShowtimeDetail>(`/showtimes/${id}`);
+  const sp = await searchParams;
+  const [show, availability, user] = await Promise.all([
+    apiGet<ShowtimeDetail>(`/showtimes/${id}`),
+    apiGet<Availability>(`/showtimes/${id}/seats`),
+    getCurrentUser(),
+  ]);
+
+  // Seats picked before signing in come back in ?seats=.
+  const valid = new Set(show.layout.seats.map((s) => s.id));
+  const initialSelection = (param(sp.seats) ?? '')
+    .split(',')
+    .filter((seatId) => valid.has(seatId))
+    .slice(0, 10);
+  const started = new Date(show.startsAt).getTime() <= Date.now();
 
   return (
     <div className="space-y-6">
@@ -44,12 +59,20 @@ export default async function ShowtimePage({ params }: Props) {
         </p>
       </div>
 
-      {show.status === 'CANCELLED' ? (
+      {show.status === 'CANCELLED' || started ? (
         <p className="rounded-xl border border-line bg-surface p-6">
-          This show has been cancelled.
+          {show.status === 'CANCELLED'
+            ? 'This show has been cancelled.'
+            : 'This show has already started, so it is no longer taking bookings.'}
         </p>
       ) : (
-        <SeatLayout layout={show.layout} prices={show.prices} />
+        <SeatPicker
+          key={show.id}
+          show={show}
+          initialSeats={availability.seats}
+          initialSelection={initialSelection}
+          signedIn={Boolean(user)}
+        />
       )}
     </div>
   );
