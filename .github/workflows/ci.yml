@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: API (typecheck, unit, e2e against Postgres)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: seatflow
+          POSTGRES_PASSWORD: seatflow
+          POSTGRES_DB: seatflow
+        # Same host port as local dev, so the e2e defaults work unchanged.
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U seatflow"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Typecheck
+        working-directory: apps/api
+        run: pnpm typecheck
+      - name: Unit tests
+        working-directory: apps/api
+        run: pnpm test
+      - name: E2E tests (includes 1000 clients competing for 50 seats)
+        working-directory: apps/api
+        run: pnpm test:e2e
+
+  web:
+    name: Web and payment simulator (typecheck, unit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Typecheck web
+        working-directory: apps/web
+        run: pnpm typecheck
+      - name: Unit tests
+        working-directory: apps/web
+        run: pnpm test
+      - name: Typecheck payment simulator
+        working-directory: apps/payment-sim
+        run: pnpm typecheck
