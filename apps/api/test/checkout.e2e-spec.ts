@@ -61,6 +61,29 @@ describe('Checkout (e2e)', () => {
     expect(order?.amountPaise).toBe(47080);
   });
 
+  it('previews the price and shows the latest payment on the reservation', async () => {
+    const reservation = await holdTwoSeats(alice);
+    const before = await request(app.getHttpServer())
+      .get(`/api/reservations/${reservation.id}`)
+      .set('Authorization', `Bearer ${alice.token}`)
+      .expect(200);
+    expect(before.body.price).toEqual({
+      subtotalPaise: 40000,
+      feePaise: 6000,
+      taxPaise: 1080,
+      amountPaise: 47080,
+    });
+    expect(before.body.latestPayment).toBeNull();
+
+    const payment = await checkout(alice, reservation.id).expect(201);
+    expect(payment.body.amountPaise).toBe(before.body.price.amountPaise);
+    const after = await request(app.getHttpServer())
+      .get(`/api/reservations/${reservation.id}`)
+      .set('Authorization', `Bearer ${alice.token}`)
+      .expect(200);
+    expect(after.body.latestPayment).toMatchObject({ id: payment.body.id, status: 'PENDING' });
+  });
+
   it('extends the hold for the payment window, once', async () => {
     const reservation = await holdTwoSeats(alice);
     const res = await checkout(alice, reservation.id).expect(201);

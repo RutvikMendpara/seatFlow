@@ -1,4 +1,5 @@
-import type { ReservationStatus, SeatCategory } from '../generated/prisma/client';
+import type { PaymentStatus, ReservationStatus, SeatCategory } from '../generated/prisma/client';
+import { priceBooking } from '../payments/pricing';
 
 type ReservationWithSeats = {
   id: string;
@@ -12,6 +13,8 @@ type ReservationWithSeats = {
     pricePaise: number;
     seat: { rowLabel: string; number: number };
   }[];
+  payments: { id: string; status: PaymentStatus; failureReason: string | null }[];
+  booking: { reference: string } | null;
 };
 
 // A hold past its expiry is expired even if the cleanup job hasn't marked it yet.
@@ -28,6 +31,10 @@ export function toReservationResponse(reservation: ReservationWithSeats, now: Da
     // Lets the client correct for its own clock when showing the countdown.
     serverTime: now,
     subtotalPaise: reservation.subtotalPaise,
+    // What checkout will charge. Shown before paying; checkout recomputes it.
+    price: priceBooking(reservation.seats.map((s) => s.pricePaise)),
+    latestPayment: reservation.payments[0] ?? null,
+    bookingReference: reservation.booking?.reference ?? null,
     seats: reservation.seats
       .map((s) => ({
         id: s.seatId,
@@ -41,4 +48,10 @@ export function toReservationResponse(reservation: ReservationWithSeats, now: Da
 
 export const reservationInclude = {
   seats: { include: { seat: { select: { rowLabel: true, number: true } } } },
+  payments: {
+    select: { id: true, status: true, failureReason: true },
+    orderBy: { createdAt: 'desc' },
+    take: 1,
+  },
+  booking: { select: { reference: true } },
 } as const;

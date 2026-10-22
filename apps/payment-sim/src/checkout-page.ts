@@ -3,7 +3,8 @@ import type { Order } from './store.ts';
 const escape = (value: string) =>
   value.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
-const rupees = (paise: number) => `₹${(paise / 100).toLocaleString('en-IN')}`;
+const rupees = (paise: number) =>
+  `₹${(paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const styles = `
   body { font: 15px/1.5 system-ui, sans-serif; background: #f4f4f6; color: #1d1d22; margin: 0; }

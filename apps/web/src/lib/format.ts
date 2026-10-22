@@ -42,8 +42,13 @@ export function formatReleaseDate(date: string) {
   return `${day} ${month}`;
 }
 
+// ₹550.80, but ₹550 rather than ₹550.00 for whole rupees.
 export function formatPrice(paise: number) {
-  return `₹${(paise / 100).toLocaleString('en-IN')}`;
+  const digits = paise % 100 === 0 ? 0 : 2;
+  return `₹${(paise / 100).toLocaleString('en-IN', {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  })}`;
 }
 
 export function formatRuntime(minutes: number) {

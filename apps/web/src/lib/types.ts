@@ -89,3 +89,41 @@ export type SeatStatus = 'AVAILABLE' | 'HELD' | 'SOLD';
 export type SeatState = { id: string; status: SeatStatus; version: number };
 
 export type Availability = { showtimeId: string; seats: SeatState[] };
+
+export type PriceBreakdown = {
+  subtotalPaise: number;
+  feePaise: number;
+  taxPaise: number;
+  amountPaise: number;
+};
+
+export type PaymentStatus =
+  | 'CREATED'
+  | 'PENDING'
+  | 'SUCCEEDED'
+  | 'FAILED'
+  | 'REFUND_PENDING'
+  | 'REFUNDED';
+
+export type Reservation = {
+  id: string;
+  showtimeId: string;
+  status: 'HELD' | 'PAYMENT_PENDING' | 'CONFIRMED' | 'EXPIRED' | 'CANCELLED';
+  expiresAt: string;
+  serverTime: string;
+  subtotalPaise: number;
+  price: PriceBreakdown;
+  latestPayment: { id: string; status: PaymentStatus; failureReason: string | null } | null;
+  bookingReference: string | null;
+  seats: { id: string; label: string; category: SeatCategory; pricePaise: number }[];
+};
+
+export type Payment = PriceBreakdown & {
+  id: string;
+  reservationId: string;
+  status: PaymentStatus;
+  currency: string;
+  checkoutUrl: string | null;
+  failureReason: string | null;
+  bookingReference: string | null;
+};
