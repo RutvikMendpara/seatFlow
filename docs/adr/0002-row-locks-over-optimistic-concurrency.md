@@ -33,8 +33,11 @@ runs at `READ COMMITTED`.
   overlapping requests queue instead of deadlocking.
 - Requests for a contested seat wait for the current holder's transaction
   before getting their 409. Under heavy contention this shows up as queueing
-  latency (see [testing.md](../testing.md)). `FOR UPDATE NOWAIT` would fail
-  them faster, at the cost of occasionally rejecting a request whose seat was
-  about to be freed by a rollback. That's worth measuring before switching.
+  latency (see [testing.md](../testing.md)). This is now mostly handled by
+  a lock-free check before the transaction, which answers `409` for seats
+  that are plainly taken without touching the locks. See
+  [performance.md](../performance.md) for the measurements. `FOR UPDATE NOWAIT`
+  would cut waiting further, at the cost of rejecting some requests whose
+  seat was about to be freed by a rollback. That hasn't been needed.
 - Expiry is checked inside the lock against database time, so an expired hold
   can be taken over without waiting for the cleanup job.

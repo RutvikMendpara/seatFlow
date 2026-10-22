@@ -22,6 +22,15 @@ type LockedSeat = {
   expired: boolean;
 };
 
+function seatsTaken(seatIds: string[]) {
+  return new ConflictException({
+    statusCode: 409,
+    error: 'Conflict',
+    message: 'Some of these seats were just taken',
+    unavailableSeatIds: seatIds,
+  });
+}
+
 // Requests queue up behind each other's row locks on popular shows, so give
 // them a little longer than Prisma's defaults before giving up.
 const TX_OPTIONS = { maxWait: 5_000, timeout: 10_000 };
@@ -46,6 +55,23 @@ export class ReservationsService {
       const existing = await this.findByIdempotencyKey(user.id, idempotencyKey);
       if (existing) return this.replay(existing, dto.showtimeId, seatIds);
     }
+
+    // Fast path for popular shows: if a seat is plainly taken, say so without
+    // opening a transaction or waiting for row locks. Most requests for a
+    // contested seat end here. This is only an early answer: anything that
+    // gets past it is checked again under lock in holdSeats.
+    const taken = await this.prisma.$queryRaw<{ seat_id: string }[]>`
+      SELECT ss.seat_id
+      FROM show_seats ss
+      LEFT JOIN reservations r ON r.id = ss.reservation_id
+      WHERE ss.showtime_id = ${dto.showtimeId}::uuid
+        AND ss.seat_id = ANY(${seatIds}::uuid[])
+        AND (
+          ss.status = 'SOLD'
+          OR (ss.status = 'HELD' AND ss.held_until > now() AND r.user_id <> ${user.id}::uuid)
+        )
+    `;
+    if (taken.length > 0) throw seatsTaken(taken.map((t) => t.seat_id));
 
     try {
       const id = await this.prisma.$transaction(
@@ -133,14 +159,7 @@ export class ReservationsService {
           ),
       )
       .map((s) => s.seat_id);
-    if (unavailable.length > 0) {
-      throw new ConflictException({
-        statusCode: 409,
-        error: 'Conflict',
-        message: 'Some of these seats were just taken',
-        unavailableSeatIds: unavailable,
-      });
-    }
+    if (unavailable.length > 0) throw seatsTaken(unavailable);
 
     if (previousIds.length > 0) {
       await tx.$executeRaw`

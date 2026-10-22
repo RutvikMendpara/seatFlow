@@ -81,6 +81,7 @@ measured concurrency results.
 - [Payment consistency](docs/payment-consistency.md)
 - [Frontend](docs/frontend.md): booking flow, live seats, accessibility
 - [Security](docs/security.md)
+- [Performance](docs/performance.md): k6 load test and one measured optimization
 - [Testing](docs/testing.md)
 - Architecture decisions:
   [Postgres as source of truth](docs/adr/0001-postgres-as-source-of-truth.md),
