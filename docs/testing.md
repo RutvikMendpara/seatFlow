@@ -32,6 +32,7 @@ show through `test/fixtures.ts`, so they don't affect each other.
 | `outbox.e2e-spec.ts` | Refunds and emails from the outbox, retries, backoff, giving up, redelivery |
 | `reconciliation.e2e-spec.ts` | Dropped webhooks, abandoned checkouts, provider outages, lost order ids |
 | `tickets.e2e-spec.ts` | Booking history, QR codes, check-in, forged tickets, simultaneous scans |
+| `security.e2e-spec.ts` | Price tampering, SQL in search, sign-in and hold rate limits, security headers |
 
 ## Concurrency test
 

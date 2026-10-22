@@ -9,7 +9,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
+import { LIMITS } from '../common/rate-limit/limits';
+import { RateLimitGuard } from '../common/rate-limit/rate-limit.guard';
 import type { Env } from '../config/env';
 import { AuthService, SESSION_TTL_MS, type AuthUser } from './auth.service';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
@@ -23,6 +26,8 @@ export class AuthController {
   ) {}
 
   @Post('register')
+  @UseGuards(RateLimitGuard)
+  @Throttle(LIMITS.register)
   async register(@Body() dto: RegisterDto, @Res({ passthrough: true }) res: Response) {
     const { user, token } = await this.auth.register(dto);
     this.setSessionCookie(res, token);
@@ -31,6 +36,8 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(200)
+  @UseGuards(RateLimitGuard)
+  @Throttle(LIMITS.login)
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
     const { user, token } = await this.auth.login(dto);
     this.setSessionCookie(res, token);

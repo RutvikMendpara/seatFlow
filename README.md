@@ -80,6 +80,7 @@ measured concurrency results.
 - [Reservation lifecycle](docs/reservation-lifecycle.md)
 - [Payment consistency](docs/payment-consistency.md)
 - [Frontend](docs/frontend.md): booking flow, live seats, accessibility
+- [Security](docs/security.md)
 - [Testing](docs/testing.md)
 - Architecture decisions:
   [Postgres as source of truth](docs/adr/0001-postgres-as-source-of-truth.md),
