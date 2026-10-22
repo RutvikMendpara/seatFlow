@@ -107,7 +107,6 @@ export default async function MoviePage({ params, searchParams }: Props) {
                         href={withParam(pathname, filters, 'date', day)}
                         scroll={false}
                         aria-current={active ? 'date' : undefined}
-                        aria-label={d.full}
                         className={`flex w-16 flex-col items-center rounded-xl border py-2 transition-colors ${
                           active
                             ? 'border-accent bg-accent text-accent-ink'
@@ -117,6 +116,7 @@ export default async function MoviePage({ params, searchParams }: Props) {
                         <span className="text-xs uppercase">{d.weekday}</span>
                         <span className="text-lg leading-tight font-bold">{d.day}</span>
                         <span className="text-xs uppercase">{d.month}</span>
+                        <span className="sr-only">{d.full}</span>
                       </Link>
                     </li>
                   );
@@ -187,20 +187,17 @@ function ShowtimeChip({ show, showLanguage }: { show: ShowtimeSummary; showLangu
     showLanguage ? show.language : null,
     show.format !== 'STANDARD' ? showFormatLabel(show.format) : null,
   ].filter(Boolean);
-  const label = [
-    formatTime(show.startsAt),
-    show.language,
-    showFormatLabel(show.format),
+  // Screen readers get the details that aren't shown, after the visible text,
+  // so the accessible name still starts with what's on screen.
+  const hidden = [
+    showLanguage ? null : show.language,
+    show.format === 'STANDARD' ? showFormatLabel(show.format) : null,
     show.auditorium,
-    fromPrice ? `from ${formatPrice(fromPrice.pricePaise)}` : null,
-  ]
-    .filter(Boolean)
-    .join(', ');
+  ].filter(Boolean);
 
   return (
     <Link
       href={`/showtimes/${show.id}`}
-      aria-label={label}
       className="flex min-w-24 flex-col items-center rounded-lg border border-success/40 px-3 py-2 text-success transition-colors hover:bg-success-soft"
     >
       <span className="text-sm font-semibold">{formatTime(show.startsAt)}</span>
@@ -210,8 +207,9 @@ function ShowtimeChip({ show, showLanguage }: { show: ShowtimeSummary; showLangu
         </span>
       )}
       {fromPrice && (
-        <span className="text-[11px] text-ink-subtle">from {formatPrice(fromPrice.pricePaise)}</span>
+        <span className="text-[11px] text-ink-muted">from {formatPrice(fromPrice.pricePaise)}</span>
       )}
+      <span className="sr-only">, {hidden.join(', ')}</span>
     </Link>
   );
 }

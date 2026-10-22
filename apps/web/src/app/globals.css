@@ -7,7 +7,8 @@
   --color-surface: #ffffff;
   --color-ink: #1d1d22;
   --color-ink-muted: #5c5c66;
-  --color-ink-subtle: #8a8a94;
+  /* About 5.4:1 on white and 5:1 on the canvas, so it passes AA for small text. */
+  --color-ink-subtle: #696973;
   --color-line: #e3e3e8;
   --color-line-strong: #c9c9d1;
 
@@ -16,7 +17,7 @@
   --color-accent-soft: #fde8ee;
   --color-accent-ink: #ffffff;
 
-  --color-success: #13804b;
+  --color-success: #0d6a3d;
   --color-success-soft: #e3f5eb;
 }
 

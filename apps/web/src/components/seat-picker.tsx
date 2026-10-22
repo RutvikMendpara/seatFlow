@@ -164,7 +164,9 @@ export function SeatPicker({ show, initialSeats, initialSelection, signedIn }: P
         <LiveBadge status={live} />
       </div>
 
-      <div className="mt-4 overflow-x-auto rounded-xl border border-line bg-surface p-4 sm:p-6">
+      {/* relative makes this the containing block for the sr-only (absolute)
+          seat labels, so they're clipped here instead of widening the page. */}
+      <div className="relative mt-4 overflow-x-auto rounded-xl border border-line bg-surface p-4 sm:p-6">
         <div className="mx-auto w-max" role="group" aria-label="Seats. Use the arrow keys to move between seats.">
           {lines.map((line) => {
             if (line.kind === 'gap') return <div key={`gap-${line.key}`} className="h-4" />;
@@ -195,7 +197,6 @@ export function SeatPicker({ show, initialSeats, initialSelection, signedIn }: P
                     seat={seat}
                     status={states.get(seat.id)?.status ?? 'AVAILABLE'}
                     selected={selected.includes(seat.id)}
-                    price={priceOf.get(seat.category) ?? 0}
                     focusable={seat.id === focusedId}
                     onToggle={() => {
                       setFocusedId(seat.id);
@@ -221,6 +222,7 @@ export function SeatPicker({ show, initialSeats, initialSelection, signedIn }: P
         </div>
       </div>
 
+      <SeatDescriptions prices={show.prices} />
       <p className="sr-only" aria-live="polite">
         {announcement}
       </p>
@@ -267,34 +269,63 @@ type SeatButtonProps = {
   seat: Seat;
   status: SeatState['status'];
   selected: boolean;
-  price: number;
   focusable: boolean;
   onToggle: () => void;
   onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => void;
   buttonRef: (el: HTMLButtonElement | null) => void;
 };
 
-function SeatButton({ seat, status, selected, price, focusable, onToggle, onKeyDown, buttonRef }: SeatButtonProps) {
-  const unavailable = status !== 'AVAILABLE';
-  const state = unavailable ? (status === 'SOLD' ? 'sold' : 'on hold') : null;
-  const description = [seat.label, seatCategoryLabel(seat.category), formatPrice(price), state]
-    .filter(Boolean)
-    .join(', ');
+const STATUSES: SeatState['status'][] = ['AVAILABLE', 'HELD', 'SOLD'];
+const descriptionId = (category: Seat['category'], status: SeatState['status']) =>
+  `seat-${category}-${status}`.toLowerCase();
 
+// Category, price and status are the same for many seats, so they live in a
+// few shared descriptions instead of being repeated on every button.
+function SeatDescriptions({ prices }: { prices: ShowtimeDetail['prices'] }) {
+  const state = { AVAILABLE: '', HELD: ', on hold', SOLD: ', sold' };
+  return (
+    <div hidden>
+      {prices.flatMap((p) =>
+        STATUSES.map((status) => (
+          <span key={descriptionId(p.category, status)} id={descriptionId(p.category, status)}>
+            {seatCategoryLabel(p.category)}, {formatPrice(p.pricePaise)}
+            {state[status]}
+          </span>
+        )),
+      )}
+    </div>
+  );
+}
+
+function SeatButton({ seat, status, selected, focusable, onToggle, onKeyDown, buttonRef }: SeatButtonProps) {
+  const mark = status === 'SOLD' ? '×' : selected ? '✓' : null;
+
+  // The name is "Row H, seat 5", built from the content so the number you can
+  // see is part of what screen readers and voice control call the button.
   return (
     <button
       ref={buttonRef}
       type="button"
       tabIndex={focusable ? 0 : -1}
-      aria-label={description}
       aria-pressed={selected}
-      aria-disabled={unavailable}
+      aria-disabled={status !== 'AVAILABLE'}
+      aria-describedby={descriptionId(seat.category, status)}
       onClick={onToggle}
       onKeyDown={onKeyDown}
       style={{ gridColumnStart: seat.gridColumn + 2 }}
-      className={`mx-auto grid size-6 place-items-center rounded-t-md rounded-b-sm border text-[10px] transition-colors ${seatStyle(status, selected)}`}
+      className={`relative mx-auto grid size-6 place-items-center rounded-t-md rounded-b-sm border text-[10px] transition-colors ${seatStyle(status, selected)}`}
     >
-      {status === 'SOLD' ? '×' : selected ? '✓' : seat.number}
+      <span>
+        <span className="sr-only">Row {seat.row}, seat </span>
+        {mark ? (
+          <>
+            <span aria-hidden>{mark}</span>
+            <span className="sr-only">{seat.number}</span>
+          </>
+        ) : (
+          seat.number
+        )}
+      </span>
     </button>
   );
 }
