@@ -22,6 +22,7 @@ export class SeatChangeListener implements OnModuleInit, OnModuleDestroy {
   private client?: Client;
   private attempt = 0;
   private stopped = false;
+  private reconnectTimer?: NodeJS.Timeout;
 
   constructor(private readonly config: ConfigService<Env, true>) {}
 
@@ -31,11 +32,14 @@ export class SeatChangeListener implements OnModuleInit, OnModuleDestroy {
 
   async onModuleDestroy() {
     this.stopped = true;
+    // Otherwise a pending reconnect would open a new connection after shutdown.
+    clearTimeout(this.reconnectTimer);
     await this.client?.end().catch(() => undefined);
     this.events.complete();
   }
 
   private async connect() {
+    if (this.stopped) return;
     const client = new Client({
       connectionString: this.config.get('DATABASE_URL', { infer: true }),
     });
@@ -81,6 +85,6 @@ export class SeatChangeListener implements OnModuleInit, OnModuleDestroy {
     const delay = RECONNECT_DELAYS_MS[Math.min(this.attempt, RECONNECT_DELAYS_MS.length - 1)]!;
     this.attempt++;
     this.logger.warn(`Seat change listener lost (${err?.message ?? 'closed'}), retrying in ${delay}ms`);
-    setTimeout(() => void this.connect(), delay);
+    this.reconnectTimer = setTimeout(() => void this.connect(), delay);
   }
 }
