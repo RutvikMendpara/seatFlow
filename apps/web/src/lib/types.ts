@@ -1,5 +1,7 @@
 export type City = { slug: string; name: string; state: string };
 
+export type User = { id: string; email: string; name: string; role: 'CUSTOMER' | 'ADMIN' };
+
 export type Certificate = 'U' | 'UA7' | 'UA13' | 'UA16' | 'A';
 export type SeatCategory = 'CLASSIC' | 'PREMIUM' | 'RECLINER';
 export type ShowFormat = 'STANDARD' | 'THREE_D' | 'IMAX';
