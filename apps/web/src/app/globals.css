@@ -45,3 +45,13 @@
     display: none;
   }
 }
+
+@media print {
+  header,
+  [data-nextjs-toast] {
+    display: none !important;
+  }
+  body {
+    background: white;
+  }
+}

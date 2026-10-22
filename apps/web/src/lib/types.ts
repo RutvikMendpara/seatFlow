@@ -127,3 +127,24 @@ export type Payment = PriceBreakdown & {
   failureReason: string | null;
   bookingReference: string | null;
 };
+
+export type Booking = {
+  reference: string;
+  createdAt: string;
+  movie: { slug: string; title: string; certificate: Certificate };
+  cinema: { slug: string; name: string; address: string };
+  auditorium: string;
+  startsAt: string;
+  language: string;
+  format: ShowFormat;
+  seats: string[];
+  subtotalPaise: number;
+  feePaise: number;
+  taxPaise: number;
+  totalPaise: number;
+  checkedInAt: string | null;
+};
+
+export type BookingWithTicket = Booking & {
+  ticket: { token: string; issuedAt: string; checkedInAt: string | null } | null;
+};
