@@ -98,6 +98,26 @@ Things worth noting:
 - Opening thousands of sockets at once overflows the server's accept backlog,
   and you get connection resets. That's why the test caps client connections.
 
+## Web app
+
+```bash
+cd apps/web
+pnpm test       # Vitest unit tests for pure helpers
+pnpm test:e2e   # Playwright, against the running Docker stack
+```
+
+| Spec | Covers |
+|---|---|
+| `booking-journey.spec.ts` | Picking seats with mouse and keyboard, signing up mid-flow, checkout, paying on the simulator, the ticket. Runs on desktop and a Pixel 7, and checks the phone layout never scrolls sideways. |
+| `payment-failures.spec.ts` | A declined payment and retry, a late webhook, changing seats |
+| `live-seats.spec.ts` | Two browsers on one show, and catching up after the socket drops |
+| `accessibility.spec.ts` | axe (WCAG 2.2 AA) on home, movie, seat map, checkout and sign in |
+
+The suite passes repeatedly with `--repeat-each=3 --workers=4`. Getting
+there turned up three real bugs: clicks lost before hydration, seat labels
+widening the page on phones, and several accessibility failures. See
+[frontend.md](frontend.md).
+
 ## End-to-end demo
 
 With the Docker stack running and seeded, this books two seats through the

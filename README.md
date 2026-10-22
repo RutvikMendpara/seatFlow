@@ -62,6 +62,15 @@ pnpm test:e2e          # API tests against Postgres
 pnpm test:concurrency  # 1000 clients competing for 50 seats
 ```
 
+Browser tests run against the Docker stack:
+
+```bash
+cd apps/web
+pnpm install
+pnpm exec playwright install chromium
+pnpm test:e2e
+```
+
 See [docs/testing.md](docs/testing.md) for what each suite checks and the
 measured concurrency results.
 
@@ -70,10 +79,12 @@ measured concurrency results.
 - [Database design](docs/database-design.md)
 - [Reservation lifecycle](docs/reservation-lifecycle.md)
 - [Payment consistency](docs/payment-consistency.md)
+- [Frontend](docs/frontend.md): booking flow, live seats, accessibility
 - [Testing](docs/testing.md)
 - Architecture decisions:
   [Postgres as source of truth](docs/adr/0001-postgres-as-source-of-truth.md),
   [row locks](docs/adr/0002-row-locks-over-optimistic-concurrency.md),
   [modular monolith](docs/adr/0003-modular-monolith.md),
   [expiry during payment](docs/adr/0004-expiry-during-payment.md),
-  [transactional outbox](docs/adr/0005-transactional-outbox.md)
+  [transactional outbox](docs/adr/0005-transactional-outbox.md),
+  [live seat updates](docs/adr/0006-live-seats-websocket-notify.md)
