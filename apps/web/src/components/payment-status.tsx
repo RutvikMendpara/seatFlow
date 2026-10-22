@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { callApi } from '@/lib/client-api';
 import { formatPrice } from '@/lib/format';
 import type { Payment } from '@/lib/types';
+import { PayButton } from './pay-button';
 
 const POLL_MS = 1_500;
 // After this long, stop polling and tell the user we'll follow up.
@@ -28,8 +29,6 @@ export function PaymentStatus({ initial }: { initial: Payment }) {
   const router = useRouter();
   const [payment, setPayment] = useState(initial);
   const [gaveUp, setGaveUp] = useState(false);
-  const [retryError, setRetryError] = useState<string | null>(null);
-  const [retrying, setRetrying] = useState(false);
   const waiting = payment.status === 'PENDING' || payment.status === 'CREATED';
 
   useEffect(() => {
@@ -52,20 +51,6 @@ export function PaymentStatus({ initial }: { initial: Payment }) {
     }, POLL_MS);
     return () => clearInterval(timer);
   }, [waiting, gaveUp, payment.id]);
-
-  async function tryAgain() {
-    setRetrying(true);
-    setRetryError(null);
-    const res = await callApi<Payment>(`/reservations/${payment.reservationId}/checkout`, {
-      method: 'POST',
-    });
-    if (res.ok && res.data.checkoutUrl) {
-      window.location.assign(res.data.checkoutUrl);
-      return;
-    }
-    setRetrying(false);
-    setRetryError(res.ok ? 'Could not start the payment.' : res.message);
-  }
 
   let title: string;
   let body: React.ReactNode;
@@ -104,19 +89,7 @@ export function PaymentStatus({ initial }: { initial: Payment }) {
 
       {payment.status === 'FAILED' && (
         <div className="mt-6 space-y-3">
-          {retryError && (
-            <p role="alert" className="rounded-lg bg-accent-soft px-3 py-2 text-sm text-accent-strong">
-              {retryError}
-            </p>
-          )}
-          <button
-            type="button"
-            onClick={tryAgain}
-            disabled={retrying}
-            className="h-11 w-full rounded-lg bg-accent font-medium text-accent-ink hover:bg-accent-strong disabled:opacity-60"
-          >
-            {retrying ? 'Opening payment…' : 'Try paying again'}
-          </button>
+          <PayButton reservationId={payment.reservationId} label="Try paying again" />
           <Link href={`/checkout/${payment.reservationId}`} className="block text-sm font-medium text-accent-strong hover:underline">
             Back to checkout
           </Link>

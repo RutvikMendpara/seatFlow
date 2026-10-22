@@ -17,7 +17,7 @@ export class ApiError extends Error {
 type Query = Record<string, string | undefined>;
 
 // Server-side fetch to the API, passing along the user's session if there is one.
-export async function apiFetch(path: string, query: Query = {}) {
+export async function apiFetch(path: string, query: Query = {}, init: { method?: string } = {}) {
   const url = new URL(`/api${path}`, API_URL);
   for (const [key, value] of Object.entries(query)) {
     if (value) url.searchParams.set(key, value);
@@ -26,6 +26,7 @@ export async function apiFetch(path: string, query: Query = {}) {
   const session = (await cookies()).get(SESSION_COOKIE)?.value;
   // Availability changes constantly, so nothing here is cached for now.
   return fetch(url, {
+    method: init.method ?? 'GET',
     cache: 'no-store',
     headers: session ? { cookie: `${SESSION_COOKIE}=${session}` } : {},
   });
