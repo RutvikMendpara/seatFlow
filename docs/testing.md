@@ -33,6 +33,7 @@ show through `test/fixtures.ts`, so they don't affect each other.
 | `reconciliation.e2e-spec.ts` | Dropped webhooks, abandoned checkouts, provider outages, lost order ids |
 | `tickets.e2e-spec.ts` | Booking history, QR codes, check-in, forged tickets, simultaneous scans |
 | `security.e2e-spec.ts` | Price tampering, SQL in search, sign-in and hold rate limits, security headers |
+| `faults.e2e-spec.ts` | Killing the live-update listener's database connection, and killing the API's connections in the middle of 150 concurrent holds |
 
 ## Concurrency test
 
@@ -98,6 +99,31 @@ Things worth noting:
   caching session lookups are the obvious things to measure next.
 - Opening thousands of sockets at once overflows the server's accept backlog,
   and you get connection resets. That's why the test caps client connections.
+
+## Fault injection
+
+`faults.e2e-spec.ts` uses `pg_terminate_backend` to drop database
+connections the way a restart or failover would. The rule is that requests
+may fail, but the data must stay consistent and the app must recover by
+itself.
+
+- With connections killed mid-storm, every response is `201`, `409` or `503`
+  (try again). The invariant checks find nothing half-done, everyone told
+  "201" really holds their seats, and a new hold works straight afterwards.
+- With the listener's connection killed, WebSocket clients are told to
+  resync, and updates flow again once it reconnects.
+
+Other failure cases are covered where they happen: a crash halfway through a
+webhook (`payment-webhooks`), a worker dying mid-event (`outbox`), and
+dropped or late webhooks (`reconciliation`).
+
+These tests found two real bugs, both now fixed:
+
+- A dropped idle connection made the `pg` pool emit an unhandled `'error'`
+  event, which crashes Node. A database restart would have taken down the
+  API and the worker instead of letting the pool reconnect.
+- Requests that lost their connection returned a generic `500`. They now
+  return `503` with `Retry-After`, since retrying is safe.
 
 ## Web app
 

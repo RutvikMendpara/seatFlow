@@ -73,6 +73,9 @@ export class SeatChangeListener implements OnModuleInit, OnModuleDestroy {
     if (this.stopped || (this.client && this.client !== client)) return;
     this.client = undefined;
     client.removeAllListeners();
+    // A dying connection can emit more than one error. Keep swallowing them,
+    // since an 'error' event with no listener would crash the process.
+    client.on('error', () => undefined);
     client.end().catch(() => undefined);
 
     const delay = RECONNECT_DELAYS_MS[Math.min(this.attempt, RECONNECT_DELAYS_MS.length - 1)]!;

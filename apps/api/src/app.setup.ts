@@ -1,7 +1,9 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { HttpAdapterHost } from '@nestjs/core';
 import { WsAdapter } from '@nestjs/platform-ws';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
+import { DatabaseUnavailableFilter } from './database/database-unavailable.filter';
 import helmet from 'helmet';
 
 // Shared by main.ts and the e2e tests so both run the same pipeline.
@@ -21,6 +23,7 @@ export function configureApp(app: INestApplication) {
       transform: true,
     }),
   );
+  app.useGlobalFilters(new DatabaseUnavailableFilter(app.get(HttpAdapterHost).httpAdapter));
   app.useWebSocketAdapter(new WsAdapter(app));
   app.enableShutdownHooks();
 }
