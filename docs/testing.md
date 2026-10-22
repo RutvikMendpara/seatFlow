@@ -70,6 +70,10 @@ Each run writes its summary to `test-results/concurrency-<scenario>.json`.
 
 ### Results
 
+These were measured before the lock-free fast path described in
+[performance.md](performance.md), with the load generator in the same
+process as the API. The k6 numbers there are the current ones.
+
 Measured on an Apple M4 (10 cores, 24 GB) running Node 24 on the host and
 Postgres 18 in Docker (7 CPUs), with the API and the load generator in the
 same process. Latency includes time spent queued behind other requests. These
