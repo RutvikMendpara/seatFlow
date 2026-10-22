@@ -1,4 +1,5 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { WsAdapter } from '@nestjs/platform-ws';
 import cookieParser from 'cookie-parser';
 
 // Shared by main.ts and the e2e tests so both run the same pipeline.
@@ -12,5 +13,6 @@ export function configureApp(app: INestApplication) {
       transform: true,
     }),
   );
+  app.useWebSocketAdapter(new WsAdapter(app));
   app.enableShutdownHooks();
 }

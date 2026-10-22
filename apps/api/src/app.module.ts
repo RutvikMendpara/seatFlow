@@ -6,6 +6,7 @@ import { CatalogueModule } from './catalogue/catalogue.module';
 import { validateEnv } from './config/env';
 import { DatabaseModule } from './database/database.module';
 import { HealthController } from './health/health.controller';
+import { LiveModule } from './live/live.module';
 import { OutboxModule } from './outbox/outbox.module';
 import { PaymentsModule } from './payments/payments.module';
 import { ReservationsModule } from './reservations/reservations.module';
@@ -24,6 +25,7 @@ import { TicketsModule } from './tickets/tickets.module';
     PaymentsModule,
     BookingsModule,
     TicketsModule,
+    LiveModule,
   ],
   controllers: [HealthController],
 })
